@@ -20,7 +20,7 @@ const getDayOfYear = (date) => {
 };
 
 // Draw the month axis with markers and labels
-const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, yearRowHeight) => {
+const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, totalRowHeight) => {
   if (yearsToDisplay.length === 0) return;
 
   const referenceYear = yearsToDisplay[0];
@@ -43,7 +43,7 @@ const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, yearRowHeight) =>
       .attr('x1', dayOfYearIndex * dayCellWidth)
       .attr('x2', dayOfYearIndex * dayCellWidth)
       .attr('y1', 15)
-      .attr('y2', (yearsToDisplay.length * yearRowHeight) + 5)
+      .attr('y2', (yearsToDisplay.length * totalRowHeight) + 5)
       .attr('stroke', MONTH_LINE_COLOR)
       .attr('stroke-width', 1)
       .attr('stroke-dasharray', '2,2');
@@ -68,13 +68,13 @@ const drawYearRow = (
   year,
   yearIndex,
   dayCellWidth,
+  totalRowHeight,
   yearRowHeight,
   dayCellBoxWidth,
-  dayCellBoxHeight,
   dayColorMap
 ) => {
   const yearRowGroup = svgGroup.append('g')
-    .attr('transform', `translate(0,${yearIndex * yearRowHeight})`);
+    .attr('transform', `translate(0,${yearIndex * totalRowHeight})`);
 
   // Add year label on the left, vertically centered within the row height
   yearRowGroup.append('text')
@@ -89,7 +89,7 @@ const drawYearRow = (
   // Determine number of days in this year
   const totalDaysInYear = isLeapYear(year) ? 366 : 365;
 
-  // Draw a box for each day
+  // Draw a box for each day - boxes fill the entire row height
   for (let dayIndex = 0; dayIndex < totalDaysInYear; dayIndex++) {
     const currentDate = new Date(year, 0, dayIndex + 1);
     const dayOfYearIndex = getDayOfYear(currentDate);
@@ -99,7 +99,7 @@ const drawYearRow = (
       .attr('x', dayIndex * dayCellWidth)
       .attr('y', 0)
       .attr('width', dayCellBoxWidth)
-      .attr('height', dayCellBoxHeight)
+      .attr('height', yearRowHeight)
       .attr('fill', dayColor)
       .style('cursor', 'pointer')
       .append('title')
@@ -119,17 +119,17 @@ const drawYearRow = (
  * @param {Object} props - Component props
  * @param {Object.<number, Array<{date: string, color: string}>>} props.eventsByYear - Object mapping years to arrays of events with dates and colors
  * @param {number} props.dayCellWidth - Width of each day cell in pixels
- * @param {number} props.dayCellHeight - Height of each day cell in pixels
- * @param {number} props.yearRowHeight - Total height of each year row in pixels
+ * @param {number} props.yearRowHeight - Height of each year row (day cells fill this height)
  * @param {number} props.cellSpacing - Horizontal spacing between day cells in pixels
+ * @param {number} props.rowSpacing - Vertical spacing between year rows in pixels
  * @param {Object} props.chartMargin - Margin configuration {top, right, bottom, left}
  */
 const YearCalendar = ({
   eventsByYear = {},
   dayCellWidth = 2,
-  dayCellHeight = 22,
   yearRowHeight = 30,
   cellSpacing = 2,
+  rowSpacing = 10,
   chartMargin = { top: 40, right: 20, bottom: 20, left: 60 }
 }) => {
   const svgRef = useRef(null);
@@ -145,17 +145,18 @@ const YearCalendar = ({
   // Memoize layout calculations that don't need to be recomputed on every render
   const layoutDimensions = useMemo(() => {
     const totalCellWidth = dayCellWidth + cellSpacing;
+    const totalRowHeight = yearRowHeight + rowSpacing;
     const maxDaysInYear = 366; // Use max to accommodate leap years
     const totalWidth = maxDaysInYear * totalCellWidth + chartMargin.left + chartMargin.right;
-    const totalHeight = sortedYears.length * yearRowHeight + chartMargin.top + chartMargin.bottom;
+    const totalHeight = sortedYears.length * totalRowHeight + chartMargin.top + chartMargin.bottom;
 
     return {
       dayCellWidth: totalCellWidth,
-      yearRowHeight: yearRowHeight,
+      totalRowHeight: totalRowHeight,
       svgWidth: totalWidth,
       svgHeight: totalHeight
     };
-  }, [dayCellWidth, cellSpacing, yearRowHeight, chartMargin, sortedYears.length]);
+  }, [dayCellWidth, cellSpacing, yearRowHeight, rowSpacing, chartMargin, sortedYears.length]);
 
   // Memoize color map creation - converts events to day-of-year indexed color lookups
   const colorMapsByYear = useMemo(() => {
@@ -186,7 +187,7 @@ const YearCalendar = ({
   useEffect(() => {
     if (!svgRef.current || sortedYears.length === 0) return;
 
-    const { dayCellWidth, yearRowHeight, svgWidth, svgHeight } = layoutDimensions;
+    const { dayCellWidth, totalRowHeight, svgWidth, svgHeight } = layoutDimensions;
 
     // Clear previous content
     const svg = d3.select(svgRef.current);
@@ -202,7 +203,7 @@ const YearCalendar = ({
       .attr('transform', `translate(${chartMargin.left},${chartMargin.top})`);
 
     // Draw month axis (markers and labels)
-    drawMonthAxis(mainGroup, sortedYears, dayCellWidth, yearRowHeight);
+    drawMonthAxis(mainGroup, sortedYears, dayCellWidth, totalRowHeight);
 
     // Draw year rows
     sortedYears.forEach((year, yearIndex) => {
@@ -211,14 +212,14 @@ const YearCalendar = ({
         year,
         yearIndex,
         dayCellWidth,
+        totalRowHeight,
         yearRowHeight,
         dayCellWidth,
-        dayCellHeight,
         colorMapsByYear[year]
       );
     });
 
-  }, [eventsByYear, dayCellWidth, dayCellHeight, yearRowHeight, cellSpacing, layoutDimensions, colorMapsByYear, chartMargin, sortedYears]);
+  }, [eventsByYear, dayCellWidth, yearRowHeight, rowSpacing, cellSpacing, layoutDimensions, colorMapsByYear, chartMargin, sortedYears]);
 
   return (
     <div style={{ overflowX: 'auto', padding: '20px' }}>

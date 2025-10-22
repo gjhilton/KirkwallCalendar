@@ -3,6 +3,11 @@ import YearCalendar from './components/YearCalendar'
 
 function App() {
   const eventsByYear = {
+        2022: [
+      { date: '2022-01-01', color: '#ff0000' },
+      { date: '2022-02-14', color: '#ff0000' },
+      { date: '2022-06-21', color: '#ff0000' },
+    ],
     2023: [
       { date: '2023-01-01', color: '#ff0000' },
       { date: '2023-02-14', color: '#ff0000' },
@@ -27,9 +32,9 @@ function App() {
       <YearCalendar
         eventsByYear={eventsByYear}
         dayCellWidth={2}
-        dayCellHeight={8}
-        yearRowHeight={12}
+        yearRowHeight={40}
         cellSpacing={0}
+        rowSpacing={5}
       />
     </div>
   )
