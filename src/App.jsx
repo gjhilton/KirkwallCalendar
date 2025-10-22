@@ -10,7 +10,8 @@ function App() {
 
   // Load CSV data on component mount
   useEffect(() => {
-    csv('/meetings.csv')
+    const csvPath = `${import.meta.env.BASE_URL}meetings.csv`;
+    csv(csvPath)
       .then((data) => {
         console.log('Loaded CSV data:', data.length, 'rows');
         setMeetingsData(data);
