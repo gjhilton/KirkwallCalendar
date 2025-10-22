@@ -45,8 +45,8 @@ function App() {
       <YearCalendar
         years={years}
         coloredDays={coloredDays}
-        boxSize={12}
-        boxSpacing={2}
+        boxSize={2}
+        boxSpacing={0}
       />
     </div>
   )

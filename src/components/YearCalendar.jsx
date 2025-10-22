@@ -36,6 +36,39 @@ const YearCalendar = ({ years, coloredDays = {}, boxSize = 12, boxSpacing = 2 })
       return Math.floor(diff / oneDay) - 1;
     };
 
+    // Draw month markers and labels ONCE at the top (using first year for reference)
+    const firstYear = years[0];
+    const months = d3.timeMonths(new Date(firstYear, 0, 1), new Date(firstYear, 11, 31));
+
+    const axisGroup = g.append('g')
+      .attr('class', 'axis-group')
+      .attr('transform', `translate(0,-20)`);
+
+    months.forEach((monthDate) => {
+      const dayIndex = getDayOfYear(monthDate);
+
+      // Add month line that spans all years
+      axisGroup.append('line')
+        .attr('x1', dayIndex * cellSize)
+        .attr('x2', dayIndex * cellSize)
+        .attr('y1', 15)
+        .attr('y2', (years.length * (cellSize + 20)) + 5)
+        .attr('stroke', '#ddd')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,2');
+
+      // Add month label at the top
+      if (dayIndex % 30 === 0 || monthDate.getMonth() % 2 === 0) {
+        axisGroup.append('text')
+          .attr('x', dayIndex * cellSize + 10)
+          .attr('y', 12)
+          .style('font-size', '10px')
+          .style('fill', '#666')
+          .style('font-weight', 'bold')
+          .text(d3.timeFormat('%b')(monthDate));
+      }
+    });
+
     // Create a row for each year
     years.forEach((year, yearIndex) => {
       const yearGroup = g.append('g')
@@ -77,11 +110,11 @@ const YearCalendar = ({ years, coloredDays = {}, boxSize = 12, boxSpacing = 2 })
           .attr('x', day * cellSize)
           .attr('y', 0)
           .attr('width', boxSize)
-          .attr('height', boxSize)
+          .attr('height', boxSize * 3)
           .attr('fill', color)
-          .attr('stroke', '#fff')
-          .attr('stroke-width', 1)
-          .attr('rx', 1)
+          /*.attr('stroke', '#fff')
+          .attr('stroke-width', 1)*/
+          //.attr('rx', 1)
           .style('cursor', 'pointer')
           .append('title')
           .text(() => {
@@ -90,31 +123,6 @@ const YearCalendar = ({ years, coloredDays = {}, boxSize = 12, boxSpacing = 2 })
             return `${dateStr}${colorInfo}`;
           });
       }
-
-      // Add month markers
-      const months = d3.timeMonths(new Date(year, 0, 1), new Date(year, 11, 31));
-      months.forEach((monthDate) => {
-        const dayIndex = getDayOfYear(monthDate);
-
-        // Add month line
-        yearGroup.append('line')
-          .attr('x1', dayIndex * cellSize)
-          .attr('x2', dayIndex * cellSize)
-          .attr('y1', -5)
-          .attr('y2', boxSize)
-          .attr('stroke', '#999')
-          .attr('stroke-width', 1);
-
-        // Add month label
-        if (dayIndex % 30 === 0 || monthDate.getMonth() % 2 === 0) {
-          yearGroup.append('text')
-            .attr('x', dayIndex * cellSize + 10)
-            .attr('y', -8)
-            .style('font-size', '9px')
-            .style('fill', '#666')
-            .text(d3.timeFormat('%b')(monthDate));
-        }
-      });
     });
 
   }, [years, coloredDays, boxSize, boxSpacing]);
