@@ -48,17 +48,15 @@ const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, totalRowHeight) =
       .attr('stroke-width', 1)
       .attr('stroke-dasharray', '2,2');
 
-    // Add month label (show every other month to avoid crowding)
-    const monthIndex = monthStartDate.getMonth();
-    if (monthIndex % 2 === 0) {
-      axisGroup.append('text')
-        .attr('x', dayOfYearIndex * dayCellWidth + 10)
-        .attr('y', 12)
-        .style('font-size', '10px')
-        .style('fill', MONTH_LABEL_COLOR)
-        .style('font-weight', 'bold')
-        .text(monthFormatter(monthStartDate));
-    }
+    // Add month label - show first letter in uppercase for all months
+    const monthLabel = monthFormatter(monthStartDate).charAt(0).toUpperCase();
+    axisGroup.append('text')
+      .attr('x', dayOfYearIndex * dayCellWidth + 5)
+      .attr('y', 12)
+      .style('font-size', '10px')
+      .style('fill', MONTH_LABEL_COLOR)
+      .style('font-weight', 'bold')
+      .text(monthLabel);
   });
 };
 
