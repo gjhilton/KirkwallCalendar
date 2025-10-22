@@ -4,8 +4,8 @@ import * as d3 from 'd3';
 // Constants
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_CELL_COLOR = '#eee';
-const MONTH_LINE_COLOR = '#ddd';
-const MONTH_LABEL_COLOR = '#666';
+const MONTH_LINE_COLOR = '#000';
+const MONTH_LABEL_COLOR = '#000';
 const AXIS_OFFSET = -20;
 
 // Helper functions extracted outside component
@@ -45,8 +45,7 @@ const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, totalRowHeight) =
       .attr('y1', 15)
       .attr('y2', (yearsToDisplay.length * totalRowHeight) + 5)
       .attr('stroke', MONTH_LINE_COLOR)
-      .attr('stroke-width', 1)
-      .attr('stroke-dasharray', '2,2');
+      .attr('stroke-width', 1);
 
     // Add month label - show first letter in uppercase for all months
     const monthLabel = monthFormatter(monthStartDate).charAt(0).toUpperCase();
