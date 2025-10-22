@@ -21,54 +21,66 @@ const getDayOfYear = (date) => {
 };
 
 // Draw the month axis with markers and labels
-const drawMonthAxis = (group, years, cellSize, rowHeight) => {
-  if (years.length === 0) return;
+const drawMonthAxis = (svgGroup, yearsToDisplay, dayCellWidth, yearRowHeight) => {
+  if (yearsToDisplay.length === 0) return;
 
-  const firstYear = years[0];
-  const months = d3.timeMonths(new Date(firstYear, 0, 1), new Date(firstYear, 11, 31));
+  const referenceYear = yearsToDisplay[0];
+  const monthBoundaries = d3.timeMonths(
+    new Date(referenceYear, 0, 1),
+    new Date(referenceYear, 11, 31)
+  );
 
-  const axisGroup = group.append('g')
+  const axisGroup = svgGroup.append('g')
     .attr('class', 'axis-group')
     .attr('transform', `translate(0,${AXIS_OFFSET})`);
 
   const monthFormatter = d3.timeFormat('%b');
 
-  months.forEach((monthDate) => {
-    const dayIndex = getDayOfYear(monthDate);
+  monthBoundaries.forEach((monthStartDate) => {
+    const dayOfYearIndex = getDayOfYear(monthStartDate);
 
     // Add vertical gridline for month boundary
     axisGroup.append('line')
-      .attr('x1', dayIndex * cellSize)
-      .attr('x2', dayIndex * cellSize)
+      .attr('x1', dayOfYearIndex * dayCellWidth)
+      .attr('x2', dayOfYearIndex * dayCellWidth)
       .attr('y1', 15)
-      .attr('y2', (years.length * rowHeight) + 5)
+      .attr('y2', (yearsToDisplay.length * yearRowHeight) + 5)
       .attr('stroke', MONTH_LINE_COLOR)
       .attr('stroke-width', 1)
       .attr('stroke-dasharray', '2,2');
 
     // Add month label (show every other month to avoid crowding)
-    const monthIndex = monthDate.getMonth();
+    const monthIndex = monthStartDate.getMonth();
     if (monthIndex % 2 === 0) {
       axisGroup.append('text')
-        .attr('x', dayIndex * cellSize + 10)
+        .attr('x', dayOfYearIndex * dayCellWidth + 10)
         .attr('y', 12)
         .style('font-size', '10px')
         .style('fill', MONTH_LABEL_COLOR)
         .style('font-weight', 'bold')
-        .text(monthFormatter(monthDate));
+        .text(monthFormatter(monthStartDate));
     }
   });
 };
 
 // Draw a single year row
-const drawYearRow = (group, year, yearIndex, cellSize, rowHeight, boxSize, boxHeight, colorMap) => {
-  const yearGroup = group.append('g')
-    .attr('transform', `translate(0,${yearIndex * rowHeight})`);
+const drawYearRow = (
+  svgGroup,
+  year,
+  yearIndex,
+  dayCellWidth,
+  yearRowHeight,
+  dayCellBoxWidth,
+  dayCellBoxHeight,
+  dayColorMap
+) => {
+  const yearRowGroup = svgGroup.append('g')
+    .attr('transform', `translate(0,${yearIndex * yearRowHeight})`);
 
   // Add year label on the left
-  yearGroup.append('text')
+  yearRowGroup.append('text')
     .attr('x', -10)
-    .attr('y', boxHeight / 2)
+    .attr('y', dayCellBoxHeight / 2)
     .attr('text-anchor', 'end')
     .attr('dominant-baseline', 'middle')
     .style('font-size', '14px')
@@ -76,26 +88,28 @@ const drawYearRow = (group, year, yearIndex, cellSize, rowHeight, boxSize, boxHe
     .text(year);
 
   // Determine number of days in this year
-  const numDays = isLeapYear(year) ? 366 : 365;
+  const totalDaysInYear = isLeapYear(year) ? 366 : 365;
 
   // Draw a box for each day
-  for (let day = 0; day < numDays; day++) {
-    const date = new Date(year, 0, day + 1);
-    const dayOfYear = getDayOfYear(date);
-    const color = colorMap?.get(dayOfYear) || DEFAULT_CELL_COLOR;
+  for (let dayIndex = 0; dayIndex < totalDaysInYear; dayIndex++) {
+    const currentDate = new Date(year, 0, dayIndex + 1);
+    const dayOfYearIndex = getDayOfYear(currentDate);
+    const dayColor = dayColorMap?.get(dayOfYearIndex) || DEFAULT_CELL_COLOR;
 
-    yearGroup.append('rect')
-      .attr('x', day * cellSize)
+    yearRowGroup.append('rect')
+      .attr('x', dayIndex * dayCellWidth)
       .attr('y', 0)
-      .attr('width', boxSize)
-      .attr('height', boxHeight)
-      .attr('fill', color)
+      .attr('width', dayCellBoxWidth)
+      .attr('height', dayCellBoxHeight)
+      .attr('fill', dayColor)
       .style('cursor', 'pointer')
       .append('title')
       .text(() => {
-        const dateStr = date.toISOString().split('T')[0];
-        const colorInfo = colorMap?.get(dayOfYear) ? ` - ${colorMap.get(dayOfYear)}` : '';
-        return `${dateStr}${colorInfo}`;
+        const dateString = currentDate.toISOString().split('T')[0];
+        const colorInfo = dayColorMap?.get(dayOfYearIndex)
+          ? ` - ${dayColorMap.get(dayOfYearIndex)}`
+          : '';
+        return `${dateString}${colorInfo}`;
       });
   }
 };
@@ -104,64 +118,75 @@ const drawYearRow = (group, year, yearIndex, cellSize, rowHeight, boxSize, boxHe
  * YearCalendar component - Displays a calendar visualization with years as rows and days as boxes
  *
  * @param {Object} props - Component props
- * @param {number[]} props.years - Array of years to display
- * @param {Object.<number, Array<{date: string, color: string}>>} props.coloredDays - Object mapping years to colored day configurations
- * @param {number} props.boxSize - Width of each day box in pixels
- * @param {number} props.boxHeight - Height of each day box in pixels
- * @param {number} props.boxSpacing - Spacing between boxes in pixels
- * @param {Object} props.margin - Margin configuration {top, right, bottom, left}
+ * @param {Object.<number, Array<{date: string, color: string}>>} props.eventsByYear - Object mapping years to arrays of events with dates and colors
+ * @param {number} props.dayCellWidth - Width of each day cell in pixels
+ * @param {number} props.dayCellHeight - Height of each day cell in pixels
+ * @param {number} props.cellSpacing - Horizontal spacing between day cells in pixels
+ * @param {Object} props.chartMargin - Margin configuration {top, right, bottom, left}
  */
 const YearCalendar = ({
-  years = [],
-  coloredDays = {},
-  boxSize = 12,
-  boxHeight = 12,
-  boxSpacing = 2,
-  margin = { top: 40, right: 20, bottom: 20, left: 60 }
+  eventsByYear = {},
+  dayCellWidth = 12,
+  dayCellHeight = 12,
+  cellSpacing = 2,
+  chartMargin = { top: 40, right: 20, bottom: 20, left: 60 }
 }) => {
   const svgRef = useRef(null);
 
-  // Memoize calculations that don't need to be recomputed on every render
-  const dimensions = useMemo(() => {
-    const cellSize = boxSize + boxSpacing;
-    const rowHeight = boxHeight + ROW_SPACING;
-    const daysInYear = 366; // Use max to accommodate leap years
-    const width = daysInYear * cellSize + margin.left + margin.right;
-    const height = years.length * rowHeight + margin.top + margin.bottom;
+  // Infer years from eventsByYear keys and sort them chronologically
+  const sortedYears = useMemo(() => {
+    return Object.keys(eventsByYear)
+      .map(Number)
+      .filter(year => !isNaN(year))
+      .sort((a, b) => a - b);
+  }, [eventsByYear]);
 
-    return { cellSize, rowHeight, width, height };
-  }, [boxSize, boxHeight, boxSpacing, margin, years.length]);
+  // Memoize layout calculations that don't need to be recomputed on every render
+  const layoutDimensions = useMemo(() => {
+    const totalCellWidth = dayCellWidth + cellSpacing;
+    const totalRowHeight = dayCellHeight + ROW_SPACING;
+    const maxDaysInYear = 366; // Use max to accommodate leap years
+    const totalWidth = maxDaysInYear * totalCellWidth + chartMargin.left + chartMargin.right;
+    const totalHeight = sortedYears.length * totalRowHeight + chartMargin.top + chartMargin.bottom;
 
-  // Memoize color map creation
-  const colorMaps = useMemo(() => {
-    const maps = {};
+    return {
+      dayCellWidth: totalCellWidth,
+      yearRowHeight: totalRowHeight,
+      svgWidth: totalWidth,
+      svgHeight: totalHeight
+    };
+  }, [dayCellWidth, dayCellHeight, cellSpacing, chartMargin, sortedYears.length]);
 
-    years.forEach(year => {
-      const yearColoredDays = coloredDays[year] || [];
-      const colorMap = new Map();
+  // Memoize color map creation - converts events to day-of-year indexed color lookups
+  const colorMapsByYear = useMemo(() => {
+    const mapsByYear = {};
 
-      yearColoredDays.forEach(({ date, color }) => {
+    sortedYears.forEach(year => {
+      const eventsForYear = eventsByYear[year] || [];
+      const dayColorMap = new Map();
+
+      eventsForYear.forEach(({ date, color }) => {
         try {
-          const d = new Date(date);
-          if (!isNaN(d.getTime()) && d.getFullYear() === year) {
-            const dayIndex = getDayOfYear(d);
-            colorMap.set(dayIndex, color);
+          const parsedDate = new Date(date);
+          if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() === year) {
+            const dayOfYearIndex = getDayOfYear(parsedDate);
+            dayColorMap.set(dayOfYearIndex, color);
           }
         } catch (error) {
           console.warn(`Invalid date format: ${date}`, error);
         }
       });
 
-      maps[year] = colorMap;
+      mapsByYear[year] = dayColorMap;
     });
 
-    return maps;
-  }, [years, coloredDays]);
+    return mapsByYear;
+  }, [sortedYears, eventsByYear]);
 
   useEffect(() => {
-    if (!svgRef.current || years.length === 0) return;
+    if (!svgRef.current || sortedYears.length === 0) return;
 
-    const { cellSize, rowHeight, width, height } = dimensions;
+    const { dayCellWidth, yearRowHeight, svgWidth, svgHeight } = layoutDimensions;
 
     // Clear previous content
     const svg = d3.select(svgRef.current);
@@ -169,22 +194,31 @@ const YearCalendar = ({
 
     // Set SVG dimensions
     svg
-      .attr('width', width)
-      .attr('height', height);
+      .attr('width', svgWidth)
+      .attr('height', svgHeight);
 
     // Create main group with margins
     const mainGroup = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
+      .attr('transform', `translate(${chartMargin.left},${chartMargin.top})`);
 
     // Draw month axis (markers and labels)
-    drawMonthAxis(mainGroup, years, cellSize, rowHeight);
+    drawMonthAxis(mainGroup, sortedYears, dayCellWidth, yearRowHeight);
 
     // Draw year rows
-    years.forEach((year, yearIndex) => {
-      drawYearRow(mainGroup, year, yearIndex, cellSize, rowHeight, boxSize, boxHeight, colorMaps[year]);
+    sortedYears.forEach((year, yearIndex) => {
+      drawYearRow(
+        mainGroup,
+        year,
+        yearIndex,
+        dayCellWidth,
+        yearRowHeight,
+        dayCellWidth,
+        dayCellHeight,
+        colorMapsByYear[year]
+      );
     });
 
-  }, [years, coloredDays, boxSize, boxHeight, boxSpacing, dimensions, colorMaps, margin]);
+  }, [eventsByYear, dayCellWidth, dayCellHeight, cellSpacing, layoutDimensions, colorMapsByYear, chartMargin, sortedYears]);
 
   return (
     <div style={{ overflowX: 'auto', padding: '20px' }}>

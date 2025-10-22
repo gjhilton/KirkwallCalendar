@@ -1,16 +1,13 @@
-import { useState } from 'react'
 import './App.css'
 import YearCalendar from './components/YearCalendar'
 
 function App() {
-  const years = [2023, 2024, 2025];
-
-  const coloredDays = {
+  const eventsByYear = {
     2023: [
       { date: '2023-01-01', color: '#ff0000' },
-      { date: '2023-02-14', color: '#ff0000' }, 
-      { date: '2023-07-04', color: '#ff0000' }, 
-      { date: '2023-12-25', color: '#ff0000' }, 
+      { date: '2023-02-14', color: '#ff0000' },
+      { date: '2023-07-04', color: '#ff0000' },
+      { date: '2023-12-25', color: '#ff0000' },
     ],
     2024: [
       { date: '2024-01-01', color: '#ff0000' },
@@ -28,11 +25,10 @@ function App() {
   return (
     <div className="App">
       <YearCalendar
-        years={years}
-        coloredDays={coloredDays}
-        boxSize={2}
-        boxHeight={8}
-        boxSpacing={0}
+        eventsByYear={eventsByYear}
+        dayCellWidth={2}
+        dayCellHeight={8}
+        cellSpacing={0}
       />
     </div>
   )
