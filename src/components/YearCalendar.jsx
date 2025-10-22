@@ -6,7 +6,6 @@ const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_CELL_COLOR = '#eee';
 const MONTH_LINE_COLOR = '#ddd';
 const MONTH_LABEL_COLOR = '#666';
-const ROW_SPACING = 20;
 const AXIS_OFFSET = -20;
 
 // Helper functions extracted outside component
@@ -77,10 +76,10 @@ const drawYearRow = (
   const yearRowGroup = svgGroup.append('g')
     .attr('transform', `translate(0,${yearIndex * yearRowHeight})`);
 
-  // Add year label on the left
+  // Add year label on the left, vertically centered within the row height
   yearRowGroup.append('text')
     .attr('x', -10)
-    .attr('y', dayCellBoxHeight / 2)
+    .attr('y', yearRowHeight / 2)
     .attr('text-anchor', 'end')
     .attr('dominant-baseline', 'middle')
     .style('font-size', '14px')
@@ -121,13 +120,15 @@ const drawYearRow = (
  * @param {Object.<number, Array<{date: string, color: string}>>} props.eventsByYear - Object mapping years to arrays of events with dates and colors
  * @param {number} props.dayCellWidth - Width of each day cell in pixels
  * @param {number} props.dayCellHeight - Height of each day cell in pixels
+ * @param {number} props.yearRowHeight - Total height of each year row in pixels
  * @param {number} props.cellSpacing - Horizontal spacing between day cells in pixels
  * @param {Object} props.chartMargin - Margin configuration {top, right, bottom, left}
  */
 const YearCalendar = ({
   eventsByYear = {},
-  dayCellWidth = 12,
-  dayCellHeight = 12,
+  dayCellWidth = 2,
+  dayCellHeight = 22,
+  yearRowHeight = 30,
   cellSpacing = 2,
   chartMargin = { top: 40, right: 20, bottom: 20, left: 60 }
 }) => {
@@ -144,18 +145,17 @@ const YearCalendar = ({
   // Memoize layout calculations that don't need to be recomputed on every render
   const layoutDimensions = useMemo(() => {
     const totalCellWidth = dayCellWidth + cellSpacing;
-    const totalRowHeight = dayCellHeight + ROW_SPACING;
     const maxDaysInYear = 366; // Use max to accommodate leap years
     const totalWidth = maxDaysInYear * totalCellWidth + chartMargin.left + chartMargin.right;
-    const totalHeight = sortedYears.length * totalRowHeight + chartMargin.top + chartMargin.bottom;
+    const totalHeight = sortedYears.length * yearRowHeight + chartMargin.top + chartMargin.bottom;
 
     return {
       dayCellWidth: totalCellWidth,
-      yearRowHeight: totalRowHeight,
+      yearRowHeight: yearRowHeight,
       svgWidth: totalWidth,
       svgHeight: totalHeight
     };
-  }, [dayCellWidth, dayCellHeight, cellSpacing, chartMargin, sortedYears.length]);
+  }, [dayCellWidth, cellSpacing, yearRowHeight, chartMargin, sortedYears.length]);
 
   // Memoize color map creation - converts events to day-of-year indexed color lookups
   const colorMapsByYear = useMemo(() => {
@@ -218,7 +218,7 @@ const YearCalendar = ({
       );
     });
 
-  }, [eventsByYear, dayCellWidth, dayCellHeight, cellSpacing, layoutDimensions, colorMapsByYear, chartMargin, sortedYears]);
+  }, [eventsByYear, dayCellWidth, dayCellHeight, yearRowHeight, cellSpacing, layoutDimensions, colorMapsByYear, chartMargin, sortedYears]);
 
   return (
     <div style={{ overflowX: 'auto', padding: '20px' }}>

@@ -28,6 +28,7 @@ function App() {
         eventsByYear={eventsByYear}
         dayCellWidth={2}
         dayCellHeight={8}
+        yearRowHeight={12}
         cellSpacing={0}
       />
     </div>
