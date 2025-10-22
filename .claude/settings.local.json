@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx create-vite@latest . --template react)",
+      "Bash(yes:*)",
+      "Bash(echo:*)",
+      "Bash(npm init:*)",
+      "Bash(mv:*)",
+      "Bash(rmdir:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
