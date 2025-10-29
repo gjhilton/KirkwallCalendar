@@ -6,8 +6,10 @@ import RangeSlider from 'react-range-slider-input'
 import 'react-range-slider-input/dist/style.css'
 import './index.css'
 import DayOfYearOverlay from './components/DayOfYearOverlay'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
+  console.log('=== APP FUNCTION START ===');
   const [meetingsData, setMeetingsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,7 +75,8 @@ function App() {
 
   // Process meetings data into day-of-year frequency counts
   const dayOfYearCounts = useMemo(() => {
-    if (!meetingsData.length || minYear === null || maxYear === null) return new Map();
+    try {
+      if (!meetingsData.length || minYear === null || maxYear === null) return new Map();
 
     let validDates = 0;
     let skippedRows = 0;
@@ -145,23 +148,44 @@ function App() {
 
     console.log(`Processed ${validDates} valid dates, skipped ${skippedRows} rows, filtered ${filteredByYear} by year range`);
     console.log('Unique days of year with data:', counts.size);
-    console.log('Max occurrences for a single day:', Math.max(...counts.values()));
+
+    // Safety check: only calculate max if we have data
+    const countsArray = Array.from(counts.values());
+    const maxCount = countsArray.length > 0 ? Math.max(...countsArray) : 0;
+    console.log('Max occurrences for a single day:', maxCount);
+
+    // Debug logging for slider issues
+    console.log(`Year range: ${minYear}-${maxYear}, resulting in ${counts.size} unique days`);
 
     return counts;
+    } catch (error) {
+      console.error('ERROR in dayOfYearCounts calculation:', error);
+      console.error('Stack trace:', error.stack);
+      // Return empty map on error to prevent crash
+      return new Map();
+    }
   }, [meetingsData, minYear, maxYear]);
 
+  console.log('=== AFTER dayOfYearCounts calculation ===');
+  console.log('App render check:', { isLoading, error, dayOfYearCountsSize: dayOfYearCounts.size, minYear });
+
   if (isLoading) {
+    console.log('Returning loading state');
     return <div className="App">Loading meetings data...</div>;
   }
 
   if (error) {
+    console.log('Returning error state');
     return <div className="App">Error loading data: {error}</div>;
   }
 
-  if (dayOfYearCounts.size === 0 && minYear !== null) {
-    return <div className="App">No valid meeting dates found in selected year range.</div>;
-  }
+  // Don't show empty message during live updates - just show empty visualization
+  // if (dayOfYearCounts.size === 0 && minYear !== null) {
+  //   console.log('Returning empty data message');
+  //   return <div className="App">No valid meeting dates found in selected year range.</div>;
+  // }
 
+  console.log('Proceeding to normal render');
   return (
     <div className="App">
       {availableYearRange.min !== null && (
@@ -226,7 +250,16 @@ function App() {
           </div>
         </div>
       )}
-      <DayOfYearOverlay dayOfYearCounts={dayOfYearCounts} />
+      <ErrorBoundary>
+        {(() => {
+          console.log('About to render DayOfYearOverlay with:', {
+            dayOfYearCountsSize: dayOfYearCounts.size,
+            dayOfYearCountsType: typeof dayOfYearCounts,
+            isMap: dayOfYearCounts instanceof Map
+          });
+          return <DayOfYearOverlay dayOfYearCounts={dayOfYearCounts} />;
+        })()}
+      </ErrorBoundary>
     </div>
   )
 }
