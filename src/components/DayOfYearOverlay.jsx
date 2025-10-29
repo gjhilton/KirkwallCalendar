@@ -268,7 +268,7 @@ const DayOfYearOverlay = ({
   console.log('DayOfYearOverlay rendering, data size:', dayOfYearCounts.size);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', padding: '20px' }}>
+    <div ref={containerRef} style={{ width: '800px', padding: '20px' }}>
        {/*<h2 style={{ marginBottom: '10px' }}>Day of Year Frequency Overlay</h2>
      <p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
         Each cell represents a day of the year. Opacity increases with frequency (15% per occurrence).
