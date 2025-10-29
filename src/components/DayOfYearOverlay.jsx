@@ -1,8 +1,8 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 
 // Constants
-const DEFAULT_CELL_COLOR = '#eee';
+const DEFAULT_CELL_COLOR = '#fff';
 const MONTH_LINE_COLOR = '#000';
 const MONTH_LABEL_COLOR = '#000';
 const AXIS_OFFSET = -20;
@@ -54,8 +54,8 @@ const drawMonthAxis = (svgGroup, dayCellWidth, rowHeight) => {
       .attr('stroke', MONTH_LINE_COLOR)
       .attr('stroke-width', 1);
 
-    // Add month label - show first letter in uppercase for all months
-    const monthLabel = monthFormatter(monthStartDate).charAt(0).toUpperCase();
+    // Add month label - show full month abbreviation
+    const monthLabel = monthFormatter(monthStartDate);
     axisGroup.append('text')
       .attr('x', dayOfYearIndex * dayCellWidth + 5)
       .attr('y', 12)
@@ -68,11 +68,11 @@ const drawMonthAxis = (svgGroup, dayCellWidth, rowHeight) => {
 
 /**
  * DayOfYearOverlay component - Displays a single row visualization where each cell
- * represents a day of the year (1-366) with opacity based on occurrence frequency
+ * represents a day of the year (1-366) with opacity based on occurrence frequency.
+ * The visualization automatically fills the available viewport width.
  *
  * @param {Object} props - Component props
  * @param {Map<number, number>} props.dayOfYearCounts - Map of day-of-year (1-366) to occurrence count
- * @param {number} props.dayCellWidth - Width of each day cell in pixels
  * @param {number} props.rowHeight - Height of the row in pixels
  * @param {number} props.cellSpacing - Horizontal spacing between day cells in pixels
  * @param {number} props.opacityPerOccurrence - Opacity increment per occurrence (default 0.15)
@@ -80,28 +80,45 @@ const drawMonthAxis = (svgGroup, dayCellWidth, rowHeight) => {
  */
 const DayOfYearOverlay = ({
   dayOfYearCounts = new Map(),
-  dayCellWidth = 2,
-  rowHeight = 40,
+  rowHeight = 80,
   cellSpacing = 0,
-  opacityPerOccurrence = 0.15,
+  opacityPerOccurrence = 0.05,
   chartMargin = { top: 40, right: 20, bottom: 20, left: 80 }
 }) => {
   const svgRef = useRef(null);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+
+  // Measure container width on mount and resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   // Memoize layout calculations
   const layoutDimensions = useMemo(() => {
-    const totalCellWidth = dayCellWidth + cellSpacing;
     const daysInYear = 366; // Include leap day
-    const totalWidth = daysInYear * totalCellWidth + chartMargin.left + chartMargin.right;
-    const totalHeight = rowHeight + chartMargin.top + chartMargin.bottom;
+    const svgWidth = containerWidth;
+    const svgHeight = rowHeight + chartMargin.top + chartMargin.bottom;
+
+    // Calculate cell width to fill the available width
+    const availableWidth = svgWidth - chartMargin.left - chartMargin.right;
+    const dayCellWidth = (availableWidth - (daysInYear - 1) * cellSpacing) / daysInYear;
 
     return {
-      dayCellWidth: totalCellWidth,
-      svgWidth: totalWidth,
-      svgHeight: totalHeight,
+      dayCellWidth,
+      svgWidth,
+      svgHeight,
       daysInYear
     };
-  }, [dayCellWidth, cellSpacing, rowHeight, chartMargin]);
+  }, [containerWidth, cellSpacing, rowHeight, chartMargin]);
 
   // Memoize color calculations
   const cellColors = useMemo(() => {
@@ -151,6 +168,7 @@ const DayOfYearOverlay = ({
       .attr('class', 'day-row');
 
     // Add row label
+    /*
     rowGroup.append('text')
       .attr('x', -10)
       .attr('y', rowHeight / 2)
@@ -159,6 +177,7 @@ const DayOfYearOverlay = ({
       .style('font-size', '14px')
       .style('font-weight', 'bold')
       .text('All Years');
+      */
 
     // Draw cells for each day of year (1-366)
     for (let dayOfYear = 1; dayOfYear <= daysInYear; dayOfYear++) {
@@ -191,14 +210,14 @@ const DayOfYearOverlay = ({
       .style('font-size', '12px')
       .text(`Total occurrences: ${totalOccurrences} | Unique days: ${totalDaysWithData}/366 | Max occurrences for a single day: ${maxOccurrences}`);
 
-  }, [dayOfYearCounts, dayCellWidth, rowHeight, cellSpacing, layoutDimensions, cellColors, chartMargin]);
+  }, [dayOfYearCounts, rowHeight, cellSpacing, layoutDimensions, cellColors, chartMargin]);
 
   return (
-    <div style={{ overflowX: 'auto', padding: '20px' }}>
+    <div ref={containerRef} style={{ width: '100%', padding: '20px' }}>
       <h2 style={{ marginBottom: '10px' }}>Day of Year Frequency Overlay</h2>
-      <p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
+      {/*<!--<p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
         Each cell represents a day of the year. Opacity increases with frequency (15% per occurrence).
-      </p>
+      </p>*/}
       <svg ref={svgRef} aria-label="Day of year frequency visualization" />
     </div>
   );
