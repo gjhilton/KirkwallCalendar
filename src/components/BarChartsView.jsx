@@ -360,17 +360,49 @@ const BarChartsView = ({ meetingsData = [] }) => {
       .nice()
       .range([height, 0]);
 
-    // Add x-axis
+    // Helper function to convert day of year to date string
+    const dayOfYearToDate = (dayOfYear) => {
+      const date = new Date(2024, 0, dayOfYear); // Use 2024 (leap year) as reference
+      return d3.timeFormat('%b %d')(date);
+    };
+
+    // Create custom axis with month/day labels
+    // Show labels at the start of each month
+    const monthStartDays = [1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336]; // Approximate start of each month
+
     const xAxis = g.append('g')
       .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x).ticks(12))
       .style('color', '#000');
 
-    xAxis.selectAll('line, path')
+    // Add main axis line
+    xAxis.append('line')
+      .attr('x1', 0)
+      .attr('x2', width)
+      .attr('y1', 0)
+      .attr('y2', 0)
       .style('stroke', '#000');
 
-    xAxis.selectAll('text')
-      .style('fill', '#000');
+    // Add tick marks and labels at month boundaries
+    monthStartDays.forEach(day => {
+      const xPos = x(day);
+
+      // Add tick mark
+      xAxis.append('line')
+        .attr('x1', xPos)
+        .attr('x2', xPos)
+        .attr('y1', 0)
+        .attr('y2', 6)
+        .style('stroke', '#000');
+
+      // Add label
+      xAxis.append('text')
+        .attr('x', xPos)
+        .attr('y', 20)
+        .style('text-anchor', 'middle')
+        .style('fill', '#000')
+        .style('font-size', '10px')
+        .text(dayOfYearToDate(day));
+    });
 
     // Add y-axis
     const yAxis = g.append('g')
